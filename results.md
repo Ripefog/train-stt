@@ -1377,3 +1377,26 @@ partial sum từng block 128 → nhiều lệnh hơn hẳn. Lợi ích băng th�
 không cứu nổi ở model 69M, batch-1. int4 chỉ thắng ở vùng memory-bound model tỉ tham số.
 
 ⇒ Khuyến nghị giữ nguyên: deploy int8; int4 chỉ khi size là ràng buộc cứng.
+
+## Vấn đáp: ORT hỗ trợ int4 tốt chưa? (2026-11-16, encoder-only bench)
+
+Phát hiện: bundle int4 cũ có 290 node MatMulNBits đều `accuracy_level=4` (= compute fp32,
+chỉ lưu weight 4-bit) — quant lại với al=0 (kernel tự chọn) và al=1 (compute int8) rồi đo
+encoder-only (T=1000, 1 thread, ghim core, interleave 3 round, ORT 1.31.1):
+
+| cấu hình | ms/forward | × realtime | tương đối fp32 |
+|---|---:|---:|---:|
+| fp32 | 289 | 34,6× | 1,00 |
+| **int8 dynamic** | **208** | **48,1×** | **0,72** |
+| int4 al=4 (bundle cũ) | 324 | 30,9× | 1,12 |
+| int4 al=0 | 301 | 33,2× | 1,04 |
+| int4 al=1 | 295 | 33,9× | 1,02 |
+
+Kết luận: đổi accuracy_level chỉ cứu ~9%, int4 tốt nhất vẫn chỉ NGANG fp32 và chậm hơn
+int8 ~42%. Trên x86 CPU, int4 của ORT (MatMulNBits) là tối ưu DUNG LƯỢNG, không phải
+tốc độ: kernel nhanh AVX512-VNNI của nó nhắm M=1 (decode LLM từng token), không phải
+encoder ASR (M = hàng trăm frame). Issue theo dõi: microsoft/onnxruntime#23004 (int4
+chậm hơn kỳ vọng ≥10×). Ghi chú API: từ ORT 1.31 module đổi tên `matmul_4bits_quantizer`
+→ `matmul_nbits_quantizer`, `process()` trả về None (docs web chưa cập nhật).
+
+⇒ Deploy CPU: int8. int4 chỉ khi size là ràng buộc cứng (đổi al=1 để bớt chậm 9% nếu dùng).
