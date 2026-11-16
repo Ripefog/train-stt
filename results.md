@@ -1400,3 +1400,12 @@ chậm hơn kỳ vọng ≥10×). Ghi chú API: từ ORT 1.31 module đổi tên
 → `matmul_nbits_quantizer`, `process()` trả về None (docs web chưa cập nhật).
 
 ⇒ Deploy CPU: int8. int4 chỉ khi size là ràng buộc cứng (đổi al=1 để bớt chậm 9% nếu dùng).
+
+### Thử int4 dynamic (quantize_dynamic + QuantType.QInt4, ORT 1.31.1)
+
+API có mặt (QuantType.QInt4/QUInt4) nhưng **chết trên mọi model thật** — decoder, joiner,
+encoder đều lỗi `must be 8-bit before packing as 4-bit values`, kể cả `per_channel=True` +
+`reduce_range=True`. Đọc source (`base_quantizer.py:349`): cơ chế là quant 8-bit rồi pack
+cặp nibble — guard dtype từ chối, tính năng ở trạng thái dở dang; trùng lỗi đã biết ở
+microsoft/onnxruntime#25631 (7/2025, "Inference fails with 4 bit quantization"). Không
+benchmark được vì không tạo nổi model. Kết luận không đổi: **CPU deploy = int8 dynamic**.
