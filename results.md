@@ -1356,3 +1356,24 @@ lợi ích kỳ vọng, (2) image docker bị prune lần 2 bởi người khác
 Khuyến nghị deploy cuối: **int8 (7,75%)** cần tốc độ / **int4 (7,79%)** cần size.
 Lưu ý vận hành: cấu hình latency tốt trên máy tải là 1-stream × 1-2 thread (bench 15/11),
 decode batch-32 chậm hơn từng câu vì padding.
+
+## Bench A/B công bằng fp32/int8/int4 (2026-11-16, `scripts/bench_ab.py`)
+
+Số tốc độ cũ (bench tuần tự, mỗi model một lượt) trên máy shared bị nhiễu tải của người
+dùng khác — đo lại công bằng: 1 process nạp đồng thời 3 model, CÙNG config (greedy, batch 1,
+1 thread), interleave block 25 cut xoay vòng model, 3 round lấy median, `taskset -c 4` ghim
+1 core. Variance giữa các round < 2%.
+
+| | fp32 | int8 PTQ | int4 PTQ (MatMulNBits b128) |
+|---|---:|---:|---:|
+| wall (median 3 round) | 48,7s | 32,3s | 52,4s |
+| × realtime | 29,3× | **44,1×** | 27,2× |
+| tương đối thời gian (int8=1) | 1,51 | 1,00 | 1,62 |
+
+**Phát hiện lật số cũ: int4 chậm hơn CẢ fp32** (số cũ bảo int4 25,3× > fp32 22,1× — sai vì
+đo không cách ly nhiễu). Giải thích: int8 dynamic chạy MLAS integer GEMM với AVX512-VNNI
+(Xeon Icelake) — 1 lệnh 4 MAC int8/lane; MatMulNBits mô phỏng nhân 4-bit bằng LUT + rescale
+partial sum từng block 128 → nhiều lệnh hơn hẳn. Lợi ích băng thông (weight 41 vs 69 MB)
+không cứu nổi ở model 69M, batch-1. int4 chỉ thắng ở vùng memory-bound model tỉ tham số.
+
+⇒ Khuyến nghị giữ nguyên: deploy int8; int4 chỉ khi size là ràng buộc cứng.

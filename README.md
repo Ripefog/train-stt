@@ -26,17 +26,22 @@ trên ~430h tiếng Việt công khai, không kế thừa checkpoint ngoài. Che
 Chạy bằng sherpa-onnx 2.0.1. `prod` = decode `beam 16 + hotwords + blank-penalty 1`
 (chế độ chạy thật); `greedy` để đối chiếu. **Key-recall** = % từ khóa đặc trưng của ref
 (từ xuất hiện ở ≤ 3% số cut val — 121.539 key / 10.830 cut) xuất hiện đúng trong hyp.
-Tốc độ đo 1-thread CPU, đơn vị × real-time.
+Tốc độ đo **A/B công bằng**: 1 process nạp đồng thời 3 model, cùng config (greedy, batch 1,
+1 thread), interleave theo block × 3 round lấy median, ghim 1 core — `scripts/bench_ab.py`,
+đơn vị × real-time.
 
 | Bundle | greedy WER / CER / Key | prod WER / CER / Key | Δ WER | Size | Tốc độ |
 |---|---|---|---:|---:|---:|
-| fp32 (avg-96-100) | 8,00 / 5,61 / 92,3 | **7,69 / 5,20 / 92,9** | — | 272 MB | 22,1× RT |
-| int8 PTQ | 7,99 / 5,59 / 92,3 | 7,75 / 5,24 / 92,8 | +0,06 | 75 MB | 30,9× RT |
-| int4 PTQ | 8,12 / 5,71 / 92,1 | 7,79 / 5,28 / 92,7 | +0,10 | **52 MB** | 25,3× RT |
+| fp32 (avg-96-100) | 8,00 / 5,61 / 92,3 | **7,69 / 5,20 / 92,9** | — | 272 MB | 29,3× RT |
+| int8 PTQ | 7,99 / 5,59 / 92,3 | 7,75 / 5,24 / 92,8 | +0,06 | 75 MB | **44,1× RT** |
+| int4 PTQ | 8,12 / 5,71 / 92,1 | 7,79 / 5,28 / 92,7 | +0,10 | **52 MB** | 27,2× RT |
 
-⇒ Quantize gần như miễn phí ở model 69M: int8 nhanh nhất, int4 nhỏ nhất (5,2× so fp32),
-mất đúng 0,10 pp WER. QAT đã thử và **thua PTQ** (train tiếp làm trôi weight nhiều hơn
-phần lỗi quant nó cứu) — chi tiết trong `results.md`.
+⇒ **int8 thắng tuyệt đối** (nhanh gấp 1,5× fp32 nhờ VNNI) và gần như không mất độ chính xác.
+**int4 chỉ đáng dùng khi cần size nhỏ** (52 MB, 5,2× so fp32): nó nhỏ nhất nhưng **chậm hơn
+cả fp32** trên CPU — kernel MatMulNBits (tra bảng + rescale từng block 128) kém hiệu quả hơn
+nhiều so với integer GEMM int8 có VNNI; cái lợi băng thông của weight nhỏ hơn không đủ bù ở
+model 69M. QAT đã thử và **thua PTQ** (train tiếp làm trôi weight nhiều hơn phần lỗi quant nó
+cứu) — chi tiết trong `results.md`.
 
 ## Tải model & chạy thử
 
