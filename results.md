@@ -1409,3 +1409,16 @@ encoder đều lỗi `must be 8-bit before packing as 4-bit values`, kể cả `
 cặp nibble — guard dtype từ chối, tính năng ở trạng thái dở dang; trùng lỗi đã biết ở
 microsoft/onnxruntime#25631 (7/2025, "Inference fails with 4 bit quantization"). Không
 benchmark được vì không tạo nổi model. Kết luận không đổi: **CPU deploy = int8 dynamic**.
+
+### Thử int4 trên GPU (CUDA EP, ORT-gpu 1.31.1, 2026-11-16) — KHÔNG KẾT LUẬN ĐƯỢC
+
+Source ORT xác nhận CUDA EP **có** kernel MatMulNBits (kèm fast path CUTLASS fpA_intB
+gated `ORT_FPA_INTB_GEMM=1`, đang dính issue crash "unsupported m"). Trên máy này:
+- Bench encoder "GPU" đầu tiên ra provider=CPUExecutionProvider cho mọi session → **số
+  đó thực chất là CPU multi-thread, vô hiệu**. Bài học: luôn verify `get_providers()` +
+  kiểm compute-apps trên nvidia-smi TRƯỚC khi tin số bench GPU.
+- Tạo session CUDA-only cho int4 treo >20 phút, không cấp phát VRAM nào (GPU đang bị
+  3 job người khác giữ 88/98GB) — không cô lập được nguyên nhân.
+⇒ Với model 69M, GPU không cần int4 (fp32 encoder ~250MB, card 96GB dư); int4-GPU chỉ
+có nghĩa cho LLM lớn. Đặt lại khi GPU rảnh nếu cần số sạch. Đã cài onnxruntime-gpu đè
+onnxruntime CPU trong .venv_tools (CPU provider vẫn dùng được; sherpa dùng ORT riêng).
