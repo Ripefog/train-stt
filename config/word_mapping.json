@@ -1,0 +1,19 @@
+{
+  "_note": "Nội dung thuật ngữ nội bộ đã bỏ khỏi bản công khai. Điền bảng map của bạn: words = {từ_gốc: cách_đọc}, xem scripts/prepare_data.py để biết format đầy đủ.",
+  "words": {},
+  "symbols": {},
+  "digit_by_digit": {},
+  "digits": [
+    "không",
+    "một",
+    "hai",
+    "ba",
+    "bốn",
+    "năm",
+    "sáu",
+    "bảy",
+    "tám",
+    "chín"
+  ],
+  "number_words": {}
+}

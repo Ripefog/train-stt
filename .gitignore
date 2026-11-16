@@ -1,0 +1,67 @@
+# Secrets
+.env
+
+# Docker
+*.tar
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Data and Logs
+DATA/
+datasets/
+raw_dataset/
+lang_bpe_scratch/
+fbank_scratch/
+callbacks_scratch/
+audio_test_onevoice/
+callbacks/
+fbank_data/
+lang_bpe_500/
+onnx/
+
+# temp
+temp*
+callbacks*/
+*.wav
+audio_*_temp/
+
+# Secrets cho run phu (.env_new ... chua key that)
+.env_*
+
+# Output cua dump_val.py / eval_beam.py (tai tao duoc)
+dump_val/
+
+# Audio test rời (input cho infer_wav.py, khong phai source)
+audio_test/
+
+# Bundle ONNX da export (259 MB, ban that nam tren HuggingFace
+# lmq1909/zipformer-vi-fpt200-finetune/B_40_onnx — khong day binary vao git)
+B_40_onnx/
+
+# Ngoại lệ: 20 mẫu công khai (viet_bud500) để chạy thử — xem README.md
+!sample_data/
+!sample_data/**/*.wav
+!sample_data/**/*.txt
+
+# Venv train host (không đẩy lên repo)
+.venv_train/
+
+# Checkout icefall trên host (cho QAT-int4 không docker)
+icefall_host/
+
+# Bundle ONNX đã export (nằm trên HF / đĩa, không vào git)
+onnx_v4_*/
+
+# Output eval từng run (tái tạo được bằng eval script)
+eval_v4_*.jsonl
+
+# Gold dataset + kết quả eval gold (data, không phải code)
+gold_eval/
+gold_eval_dataset/
+
+# Backup checkpoint epoch-100
+backup_run100/
+config_private/
